@@ -1,4 +1,4 @@
 gtscp
 =====
 
-A simple SCP clone
+A simple SCP clone.

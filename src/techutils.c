@@ -2,10 +2,41 @@
 #include <stdlib.h>
 #include "option.h"
 #include <string.h>
+#include <gcrypt.h>
 
 /*cryptographic*/
-int deriveKey(char* password, char* salt, int numIterations, 
+int initGcrypt(){
+    const int MAX_SECURE_MEM = 16384;
+    if(! gcry_check_version("1.5.0")){
+	return GCRYPT_VERSION_ERROR;
+    }
+    /*suppress warnings*/
+    gcry_control (GCRYCTL_SUSPEND_SECMEM_WARN);
+    /*allocate 16k of secure memory*/
+    gcry_control (GCRYCTL_INIT_SECMEM, MAX_SECURE_MEM, 0);
+    /*re-enable warnings*/
+    gcry_control (GCRYCTL_RESUME_SECMEM_WARN);
+    /* Tell Libgcrypt that initialization has completed. */
+    gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
+}
+
+int deriveKey(char* password, char* salt, int numIterations, int keyLength,
 	      char** key){
+    gpg_error_t err;
+    size_t KEY_LENGTH = keyLength;
+    *key = (char*)(malloc(KEY_LENGTH * sizeof(char)));
+
+    /*
+    DPRINT("deriving key using password %s %d len salt %s %d len %d iterations \
+	    with key length %d \n", password, strlen(password),
+	    salt, strlen(salt),  numIterations, KEY_LENGTH);
+    */
+    err = gcry_kdf_derive(password, strlen(password), 
+	    GCRY_KDF_PBKDF2, GCRY_MD_SHA256, salt, strlen(salt),
+	    numIterations, KEY_LENGTH, *key);
+
+    DPRINT("derived key of %s \n", password);
+    if(err){ return KEY_DERIVE_ERROR;}
     return NONE;
 }
 int aes_ctr  (char* key, char* inFile, int fileLength, int ctrInit,
@@ -85,9 +116,18 @@ int parseArgs(int argc, char** argv,
     return NONE;
 }
 
-int checkErr(int err, char* msg){
+void checkErr(int err, char* msg){
     if(NONE != err){
 	printf("%s\n", msg);
 	exit(err);
+    }
+}
+/*prints the key as hexadecimal*/
+void printKey(char* key, int keyLength){
+
+    int i;
+    printf("Key:");
+    for(i = 0; i < keyLength; i++){
+	printf(" %02X", (unsigned char)(*(key+i)));
     }
 }

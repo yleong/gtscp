@@ -11,6 +11,7 @@ int main(int argc, char** argv){
     int fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
+    int keyLength = 32;
     int numIterations = 4096, ctrInit = 0;
     char *key;
 
@@ -20,8 +21,10 @@ int main(int argc, char** argv){
 
     password = getpass("Password:");
 
-    err = deriveKey(password, salt, numIterations, &key);
+    initGcrypt();
+    err = deriveKey(password, salt, numIterations, keyLength, &key);
     checkErr(err, "Key derivation error");
+    printKey(key, keyLength);
 
     err = readFile(fileName, &fileLength, &inFile);
     checkErr(err, "File read error");

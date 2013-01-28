@@ -4,7 +4,8 @@
 #include "option.h"
 
 /*cryptographic*/
-int deriveKey(char* password, char* salt, int numIterations, 
+int initGcrypt();
+int deriveKey(char* password, char* salt, int numIterations, int keyLength,
 	      char** key);
 int aes_ctr  (char* key, char* inFile, int fileLength, int ctrInit,
               char** outFile);
@@ -20,4 +21,5 @@ int writeFile(char* fileName, char* outFile, char* mac);
 int parseArgs(int argc, char** argv, 
 	      char** fileName, char** ipAddress, int* port);
 void checkErr(int err, char* msg);
+void printKey(char* key, int keyLength);
 #endif

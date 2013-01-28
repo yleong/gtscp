@@ -8,6 +8,7 @@ int main(int argc, char** argv){
 
     char *fileName, *inFile, *outFile, *mac, *ipAddr;  
     int port;
+    int fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
     int numIterations = 4096, ctrInit = 0;
@@ -22,14 +23,14 @@ int main(int argc, char** argv){
     err = deriveKey(password, salt, numIterations, &key);
     checkErr(err, "Key derivation error");
 
-    err = readFile(fileName, &inFile);
+    err = readFile(fileName, &fileLength, &inFile);
     checkErr(err, "File read error");
 
-    err = aes_ctr(key, inFile, ctrInit, &outFile);
+    err = aes_ctr(key, inFile, fileLength, ctrInit, &outFile);
     checkErr(err, "Encryption error");
 
-    err = hmac(key, outFile, &mac);
-    checkErr(err, "HMAC error");
+    err = hmac(key, outFile, fileLength, &mac);
+    checkErr(err, "HMAC computation error");
 
     if(D_SEND == opt){
 	err = sendFile(outFile, mac, ipAddr, port);

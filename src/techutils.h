@@ -6,14 +6,14 @@
 /*cryptographic*/
 int deriveKey(char* password, char* salt, int numIterations, 
 	      char** key);
-int aes_ctr  (char* key, char* inFile, int ctrInit,
+int aes_ctr  (char* key, char* inFile, int fileLength, int ctrInit,
               char** outFile);
-int hmac     (char* key, char* outFile, 
+int hmac     (char* key, char* outFile, int fileLength,
 	      char** mac );
 
 /*file IO*/
 int readFile (char* fileName, 
-	      char** inFile);
+	      int* fileLength, char** inFile);
 int writeFile(char* fileName, char* outFile, char* mac);
 
 /*misc*/

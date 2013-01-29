@@ -54,10 +54,12 @@ int main(int argc, char** argv){
 	DPRINT("sending file to remote host\n");
 	err = sendFile(outFile, fileLength, mac, macLength, ipAddr, port);
 	checkErr(err, "File send error");
+	printf("%ld bytes sent.\n", fileLength+macLength);
     } else if(L_LOCAL == opt){
 	DPRINT("writing file locally\n");
 	err = writeFile(fileName, outFile, fileLength, mac, macLength, opt);
-	checkErr(err, "File write error");
+	checkErr(err, "File write error/ Output file exists error");
+	printf("%ld bytes written.\n", fileLength+macLength);
     }
     
     return 0;

@@ -31,13 +31,6 @@ int main(int argc, char** argv){
     opt = parseArgs(argc, argv, &fileName, NULL, &port);
     checkErr(opt, USAGE_STR);
 
-    password = getpass("Password:");
-
-    initGcrypt();
-    err = deriveKey(password, salt, numIterations, keyLength, &key);
-    checkErr(err, "Key derivation error");
-    printKey(key, keyLength);
-
     if(D_DAEMON == opt){
 	err = receiveFile(port, &inFile, &fileLength);
 	checkErr(err, "File receive error");
@@ -46,6 +39,12 @@ int main(int argc, char** argv){
 	err = readFile(fileName, &fileLength, &inFile );
 	checkErr(err, "File read error");
     }
+    password = getpass("Password:");
+
+    initGcrypt();
+    err = deriveKey(password, salt, numIterations, keyLength, &key);
+    checkErr(err, "Key derivation error");
+    printKey(key, keyLength);
 
     err = verifyMac(key, keyLength, inFile, fileLength, macLength);
     checkErr(err, "HMAC verification error");
@@ -59,7 +58,8 @@ int main(int argc, char** argv){
     checkErr(err, "Decryption error");
 
     err = writeFile(fileName, outFile, fileLength - macLength, NULL, 1, opt);
-    checkErr(err, "File write error");
+    checkErr(err, "File write error/ Output file exists error");
+    printf("%ld bytes written.\n", fileLength - macLength);
 
     return 0;
 }
@@ -119,6 +119,7 @@ int receiveFile(int port,
 
     long amtReceived = 0;
     DPRINT("going to listen\n");
+    printf("Waiting for connections.\n");
     err = listen(receiveSocket, 1);
     if(err) {return ERROR;}
     DPRINT("now listening\n");
@@ -126,6 +127,7 @@ int receiveFile(int port,
     acceptedSocket = accept(receiveSocket, &incomingAddr, &incomingAddrSize);
     if(-1 == acceptedSocket){DPRINT("invalid socket\n"); return ERROR;}
 
+    printf("Inbound file.\n");
     DPRINT("receiving file length\n");
     /*file length has not been received yet*/
     char * buff = (char*)(malloc(1 * sizeof(uint32_t)));

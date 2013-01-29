@@ -237,4 +237,5 @@ void printKey(char* key, int keyLength){
     for(i = 0; i < keyLength; i++){
 	printf(" %02X", (unsigned char)(*(key+i)));
     }
+    printf("\n");
 }

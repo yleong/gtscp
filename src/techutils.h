@@ -7,7 +7,8 @@
 int initGcrypt();
 int deriveKey(char* password, char* salt, int numIterations, int keyLength,
 	      char** key);
-int aes_ctr  (char* key, char* inFile, long fileLength, int ctrInit,
+int aes_ctr  (char* key, int keyLength, char* inFile, long fileLength, char*
+ctrInit, int blockLength,
               char** outFile);
 int hmac     (char* key, char* outFile, long fileLength,
 	      char** mac, int* macLength);

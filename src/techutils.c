@@ -39,8 +39,30 @@ int deriveKey(char* password, char* salt, int numIterations, int keyLength,
     if(err){ return KEY_DERIVE_ERROR;}
     return NONE;
 }
-int aes_ctr  (char* key, char* inFile, long fileLength, int ctrInit,
+int aes_ctr  (char* key, int keyLength, char* inFile, long fileLength, char*
+ctrInit, int blockLength,
               char** outFile){
+    gcry_error_t err;
+    gcry_cipher_hd_t aeshd;
+
+    err = gcry_cipher_open(&aeshd, GCRY_CIPHER_AES256,
+	                           GCRY_CIPHER_MODE_CTR,
+	                           GCRY_CIPHER_SECURE);
+    if(err){return CIPHER_OPEN_ERROR;}
+
+    err = gcry_cipher_setkey(aeshd, key, keyLength);
+    if(err){return CIPHER_SETKEY_ERROR;}
+    
+    err = gcry_cipher_setctr(aeshd, ctrInit, blockLength);
+    if(err){return CIPHER_SETCTR_ERROR;}
+
+    *outFile = (char*)(malloc(fileLength * sizeof(char)));
+    DPRINT("going to enc/dec now\n");
+    err = gcry_cipher_encrypt(aeshd, *outFile, fileLength, inFile, fileLength);
+    if(err){return CIPHER_ENCRYPT_ERROR;}
+
+    DPRINT("done with enc/dec\n");
+    gcry_cipher_close(aeshd);
     return NONE;
 }
 int hmac     (char* key, char* outFile, long fileLength,
@@ -78,7 +100,6 @@ int writeFile(char* fileName, char* outFile, long fileLength, char* mac, int
     /*check if exists -> error code 33*/
     if(isTechDec){
 	/*strip the extension*/
-	DPRINT("fileName: %s, extension: %s", fileName, extension);
 	outFileNameLen = strlen(fileName) - strlen(extension) + 1; /*for null*/
 	outFileName = (char *)(malloc(outFileNameLen*sizeof(char)));
 	strncpy(outFileName, fileName, outFileNameLen-1);

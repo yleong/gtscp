@@ -1,6 +1,8 @@
 #include "techutils.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 int receiveFile(int port, 
 	        char** inFile, long* fileLength);
@@ -12,8 +14,9 @@ int main(int argc, char** argv){
     long fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
-    int keyLength = 32, macLength;
-    int numIterations = 4096, ctrInit = 0;
+    int keyLength = 32, macLength, blockLength = 16;
+    int numIterations = 4096;
+    char *ctrInit;  
     char *key;
 
     opt = parseArgs(argc, argv, &fileName, NULL, &port);
@@ -38,8 +41,43 @@ int main(int argc, char** argv){
     err = verifyMac(key, inFile, fileLength);
     checkErr(err, "HMAC verification error");
 
-    err = aes_ctr(key, inFile, fileLength - HMAC_LENGTH, ctrInit, &outFile);
+    ctrInit = (char*)(malloc(blockLength * sizeof(char)));
+    /*using a zero counter each time*/
+    memset((void *)ctrInit, 0, (size_t)(blockLength * sizeof(char))); 
+
+
+    /*testing only!!!!!!!!!!!!!!!!!!!!*/ 
+    int foo = 14;
+    /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+      
+
+
+
+
+
+    err = aes_ctr(key, keyLength, inFile, fileLength - foo /* HMAC_LENGTH */, ctrInit,
+	    blockLength, &outFile);
     checkErr(err, "Decryption error");
+
+
+
+
+
+
+
+
+
+	/*DEBUGGING ONLY PLS REMOVE!!!!!!*/
+	//outFile = inFile;
+	/*!!!!!!!!!!!!*/
+
+
+
+
+
+
+
+
 
     err = writeFile(fileName, outFile, fileLength, NULL, 1);
     checkErr(err, "File write error");

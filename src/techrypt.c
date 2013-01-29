@@ -1,6 +1,8 @@
 #include "techutils.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 int sendFile(char* outFile, char* mac, char* ipAddr, int port);
 char* USAGE_STR = "usage: techrypt < input file > [-d < IP-addr:port >][-l ]";
@@ -11,9 +13,9 @@ int main(int argc, char** argv){
     long fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
-    int keyLength = 32, macLength;
-    int numIterations = 4096, ctrInit = 0;
-    char *key;
+    int keyLength = 32, macLength, blockLength = 16;
+    int numIterations = 4096;
+    char * ctrInit;    char *key;
 
 
     opt = parseArgs(argc, argv, &fileName, &ipAddr, &port);
@@ -30,7 +32,10 @@ int main(int argc, char** argv){
     err = readFile(fileName, &fileLength, &inFile);
     checkErr(err, "File read error");
 
-    err = aes_ctr(key, inFile, fileLength, ctrInit, &outFile);
+    ctrInit =  (char*)(malloc(blockLength * sizeof(char)));
+    /*using a zero counter each time*/
+    memset((void*)ctrInit, 0, (size_t)(blockLength * sizeof(char)) ); 
+    err = aes_ctr(key, keyLength, inFile, fileLength, ctrInit, blockLength, &outFile);
     checkErr(err, "Encryption error");
 
     err = hmac(key, outFile, fileLength, &mac, &macLength);
@@ -43,10 +48,22 @@ int main(int argc, char** argv){
 	DPRINT("writing file locally\n");
 
 
+
+
+
+
+
+
 	/*DEBUGGING ONLY PLS REMOVE!!!!!!*/
 	mac = salt;
 	macLength = 14;
+	//outFile = inFile;
 	/*!!!!!!!!!!!!*/
+
+
+
+
+
 
 
 	err = writeFile(fileName, outFile, fileLength, mac, macLength);

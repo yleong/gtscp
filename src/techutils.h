@@ -10,7 +10,7 @@ int deriveKey(char* password, char* salt, int numIterations, int keyLength,
 int aes_ctr  (char* key, int keyLength, char* inFile, long fileLength, char*
 ctrInit, int blockLength,
               char** outFile);
-int hmac     (char* key, char* outFile, long fileLength,
+int hmac     (char* key, int keyLength, char* outFile, long fileLength,
 	      char** mac, int* macLength);
 
 /*file IO*/

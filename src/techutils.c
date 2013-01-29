@@ -65,8 +65,37 @@ ctrInit, int blockLength,
     gcry_cipher_close(aeshd);
     return NONE;
 }
-int hmac     (char* key, char* outFile, long fileLength,
+int hmac     (char* key, int keyLength, char* outFile, long fileLength,
 	      char** mac, int* macLength ){
+    DPRINT("\nin hmac.\n");
+    gcry_error_t err;
+    gcry_md_hd_t shahd;
+
+    DPRINT("opening hash\n");
+    err = gcry_md_open(&shahd, GCRY_MD_SHA256, GCRY_MD_FLAG_HMAC);
+    if(err){ return MD_OPEN_ERROR;}
+
+    DPRINT("setting key\n");
+    err = gcry_md_setkey(shahd, key, keyLength);
+    if(err){ return MD_SETKEY_ERROR;}
+
+    DPRINT("actually hashing\n");
+    DPRINT("\n%s\n", outFile);
+    DPRINT("%ld\n",fileLength);
+    gcry_md_write(shahd, outFile, fileLength);
+
+    DPRINT("done hashing\n");
+    *macLength = 32;
+
+    char* temp;
+    temp = gcry_md_read(shahd, GCRY_MD_SHA256);
+
+    DPRINT("preparing to read hash\n");
+    /*copy it over since closing shahd would free the mac.*/
+    *mac = (char*)(malloc(*macLength * sizeof(char)));
+    memcpy(*mac, temp, *macLength);
+
+    gcry_md_close(shahd);
     return NONE;
 }
 

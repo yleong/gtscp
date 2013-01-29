@@ -13,7 +13,7 @@ int main(int argc, char** argv){
     long fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
-    int keyLength = 32, macLength, blockLength = 16;
+    int keyLength = 32, macLength = 32, blockLength = 16;
     int numIterations = 4096;
     char * ctrInit;    char *key;
 
@@ -38,7 +38,7 @@ int main(int argc, char** argv){
     err = aes_ctr(key, keyLength, inFile, fileLength, ctrInit, blockLength, &outFile);
     checkErr(err, "Encryption error");
 
-    err = hmac(key, outFile, fileLength, &mac, &macLength);
+    err = hmac(key, keyLength, outFile, fileLength, &mac, &macLength);
     checkErr(err, "HMAC computation error");
 
     if(D_SEND == opt){
@@ -46,26 +46,6 @@ int main(int argc, char** argv){
 	checkErr(err, "File send error");
     } else if(L_LOCAL == opt){
 	DPRINT("writing file locally\n");
-
-
-
-
-
-
-
-
-	/*DEBUGGING ONLY PLS REMOVE!!!!!!*/
-	mac = salt;
-	macLength = 14;
-	//outFile = inFile;
-	/*!!!!!!!!!!!!*/
-
-
-
-
-
-
-
 	err = writeFile(fileName, outFile, fileLength, mac, macLength);
 	checkErr(err, "File write error");
     }

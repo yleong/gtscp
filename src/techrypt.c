@@ -3,8 +3,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
-int sendFile(char* outFile, char* mac, char* ipAddr, int port);
+/*Network includes*/
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
+int sendFile(char* outFile, long fileLength, char* mac, int macLength, char*
+	ipAddr, int port);
 char* USAGE_STR = "usage: techrypt < input file > [-d < IP-addr:port >][-l ]";
 int main(int argc, char** argv){
 
@@ -42,7 +50,8 @@ int main(int argc, char** argv){
     checkErr(err, "HMAC computation error");
 
     if(D_SEND == opt){
-	err = sendFile(outFile, mac, ipAddr, port);
+	DPRINT("sending file to remote host\n");
+	err = sendFile(outFile, fileLength, mac, macLength, ipAddr, port);
 	checkErr(err, "File send error");
     } else if(L_LOCAL == opt){
 	DPRINT("writing file locally\n");
@@ -53,6 +62,78 @@ int main(int argc, char** argv){
     return 0;
 }
 
-int sendFile(char* outFile, char* mac, char* ipAddr, int port){
+
+int sendFile(char* outFile, long fileLength, char* mac, int macLength, char*
+	ipAddr, int port){ 
+
+    int sendSocket;
+    int err, portStrlen;
+    char *portStr;
+    struct addrinfo *res, *curr;
+    struct addrinfo hints;
+     
+    /*set up the hints to let addrinfo knows what flags to filter etc*/
+    /*unused fields should be 0*/
+    memset(&hints, 0, sizeof(hints));
+    /*ipv4*/
+    hints.ai_family = AF_INET; 
+    /*TCP is needed to transfer ciphertext reliably*/
+    hints.ai_socktype = SOCK_STREAM;
+    
+    /*Convert port number to string*/
+    portStrlen = ceil(log10((float)(port))) + 1; /* 1 for \0*/
+    portStr = (char *)(malloc(portStrlen * sizeof(char)));
+    sprintf(portStr, "%d", port);
+
+    err = getaddrinfo(ipAddr,portStr, &hints, &res);
+    if(err){return GETADDR_ERROR;}
+
+    /*get a connected socket out of list: res*/
+    err = -1;
+    curr = res;
+    while(NULL != curr){
+	sendSocket = socket((*curr).ai_family, (*curr).ai_socktype,
+			    (*curr).ai_protocol);
+	if(-1 != sendSocket){
+	    //err = bind(sendSocket, (*curr).ai_addr, (*curr).ai_addrlen);
+	    err = connect(sendSocket, (*curr).ai_addr, (*curr).ai_addrlen);
+	}
+	if(-1 != err){
+	    /*successfully connected*/
+	    break;
+	}
+	/*try the next one*/
+	close(sendSocket);
+	curr = (*curr).ai_next;
+    }
+
+    /*exhausted res but still no available sockets*/
+    if(NULL == curr){
+	return NO_SOCK_ERROR;
+    }
+    freeaddrinfo(res);
+
+    /*attempt to send all the ciphertext*/
+    uint32_t length = htonl(fileLength + macLength);
+    DPRINT("sending the file length now\n");
+    sendAll(sendSocket, (char*)(&length), sizeof(length) );
+    //sendAll(sendSocket, outFile, fileLength);
+    //sendAll(sendSocket, mac, macLength);
+
+    close(sendSocket);
+    
     return NONE;
+}
+int sendAll(int socket, char* buff, int len){
+    int sentAmt;
+    int totalSent = 0;
+
+    while(totalSent != len){
+	DPRINT("sending %d of %d", totalSent, len);
+	sentAmt = send(socket, (buff+totalSent), len-totalSent, 0);
+	if(-1 == sentAmt ){
+	    return ERROR;
+	}
+	totalSent += sentAmt;
+    }
 }

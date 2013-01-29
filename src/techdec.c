@@ -3,6 +3,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+
+/*Network includes*/
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 int receiveFile(int port, 
 	        char** inFile, long* fileLength);
@@ -12,7 +19,7 @@ char* USAGE_STR = "usage: techdec < filename >  [-d < port >][-l] ";
 int main(int argc, char** argv){
     char *fileName, *inFile, *outFile;  
     int port;
-    long fileLength;
+    long fileLength=0;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
     int keyLength = 32, macLength = 32, blockLength = 16;
@@ -58,6 +65,81 @@ int main(int argc, char** argv){
 
 int receiveFile(int port, 
 	        char** inFile, long* fileLength){
+    int receiveSocket, acceptedSocket;
+    int err, portStrlen;
+    char *portStr;
+    struct addrinfo *res, *curr;
+    struct addrinfo hints;
+    struct sockaddr incomingAddr;
+    socklen_t incomingAddrSize = sizeof(incomingAddr);
+     
+    /*set up the hints to let addrinfo knows what flags to filter etc*/
+    /*unused fields should be 0*/
+    memset(&hints, 0, sizeof(hints));
+    /*ipv4*/
+    hints.ai_family = AF_INET; 
+    /*TCP is needed to transfer ciphertext reliably*/
+    hints.ai_socktype = SOCK_STREAM;
+    /*automatically use localhost*/
+    hints.ai_flags = AI_PASSIVE;
+    
+    /*Convert port number to string*/
+    portStrlen = ceil(log10((float)(port))) + 1; /* 1 for \0*/
+    portStr = (char *)(malloc(portStrlen * sizeof(char)));
+    sprintf(portStr, "%d", port);
+
+    err = getaddrinfo(NULL,portStr, &hints, &res);
+    if(err){return GETADDR_ERROR;}
+
+    /*get a bound socket out of list: res*/
+    err = -1;
+    curr = res;
+    while(NULL != curr){
+	receiveSocket = socket((*curr).ai_family, (*curr).ai_socktype,
+			    (*curr).ai_protocol);
+	if(-1 != receiveSocket){
+	    err = bind(receiveSocket, (*curr).ai_addr, (*curr).ai_addrlen);
+	    //err = connect(sendSocket, (*curr).ai_addr, (*curr).ai_addrlen);
+	}
+	if(-1 != err){
+	    /*successfully connected*/
+	    break;
+	}
+	/*try the next one*/
+	close(receiveSocket);
+	curr = (*curr).ai_next;
+    }
+
+    /*exhausted res but still no available sockets*/
+    if(NULL == curr){
+	return NO_SOCK_ERROR;
+    }
+    freeaddrinfo(res);
+
+    long amtReceived = 0;
+    DPRINT("going to listen\n");
+    err = listen(receiveSocket, 1);
+    if(err) {return ERROR;}
+    DPRINT("now listening\n");
+    while(1){
+	DPRINT("waiting");
+	acceptedSocket = accept(receiveSocket, &incomingAddr,
+		&incomingAddrSize);
+	if(-1 == acceptedSocket) continue;
+	if(0 == *fileLength){
+	    DPRINT("receiving file length\n");
+	    /*file length has not been received yet*/
+	    char * buff = (char*)(malloc(1 * sizeof(long)));
+	    recv(acceptedSocket, buff, 1*sizeof(long), 0);
+	    *fileLength = ntohl(  *((long*)(buff)));
+	    DPRINT("received file length %ld\n", *fileLength);
+	    *inFile = (char*)(malloc( *fileLength *sizeof(char)));
+	} else{
+	    /*receive the ciphertext*/
+	}
+    
+    }
+
     return NONE;
 }
 

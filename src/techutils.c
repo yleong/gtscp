@@ -40,7 +40,7 @@ int deriveKey(char* password, char* salt, int numIterations, int keyLength,
     return NONE;
 }
 int aes_ctr  (char* key, int keyLength, char* inFile, long fileLength, char*
-ctrInit, int blockLength,
+	      ctrInit, int blockLength,
               char** outFile){
     gcry_error_t err;
     gcry_cipher_hd_t aeshd;
@@ -80,7 +80,6 @@ int hmac     (char* key, int keyLength, char* outFile, long fileLength,
     if(err){ return MD_SETKEY_ERROR;}
 
     DPRINT("actually hashing\n");
-    DPRINT("\n%s\n", outFile);
     DPRINT("%ld\n",fileLength);
     gcry_md_write(shahd, outFile, fileLength);
 

@@ -35,8 +35,8 @@ int main(int argc, char** argv){
     ctrInit =  (char*)(malloc(blockLength * sizeof(char)));
     /*using a zero counter each time*/
     memset((void*)ctrInit, 0, (size_t)(blockLength * sizeof(char)) ); 
-    err = aes_ctr(key, keyLength, inFile, fileLength, ctrInit, blockLength, &outFile);
-    checkErr(err, "Encryption error");
+    err = aes_ctr(key, keyLength, inFile, fileLength, ctrInit, blockLength,
+	    &outFile); checkErr(err, "Encryption error");
 
     err = hmac(key, keyLength, outFile, fileLength, &mac, &macLength);
     checkErr(err, "HMAC computation error");

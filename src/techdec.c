@@ -55,17 +55,19 @@ int main(int argc, char** argv){
 
     return 0;
 }
+
 int receiveFile(int port, 
 	        char** inFile, long* fileLength){
     return NONE;
 }
+
 int verifyMac(char* key, int keyLength, char* inFile, long fileLength, int
 	macLength){
     int err;
     char* mac;
 
-    err = hmac(key, keyLength, inFile, fileLength - macLength,  &mac, &macLength);
-    checkErr(err, "HMAC computation error");
+    err = hmac(key, keyLength, inFile, fileLength - macLength,  &mac,
+	    &macLength); checkErr(err, "HMAC computation error");
     if( 0 != memcmp(mac, inFile+fileLength-macLength, macLength)){
 	DPRINT("doesn't match!\n");
 	return VERIFY_MAC_ERROR;

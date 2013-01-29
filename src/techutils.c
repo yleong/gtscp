@@ -118,7 +118,7 @@ int readFile (char* fileName,
     return NONE;
 }
 int writeFile(char* fileName, char* outFile, long fileLength, char* mac, int
-	macLength){
+	macLength, int opt){
     int isTechDec = (NULL == mac);
     char * extension = ".gt";
     char * outFileName;
@@ -126,19 +126,22 @@ int writeFile(char* fileName, char* outFile, long fileLength, char* mac, int
 
     /*techdec removes the extension, techrypt adds the extension*/
     /*check if exists -> error code 33*/
-    if(isTechDec){
+    if(isTechDec && L_LOCAL == opt){
 	/*strip the extension*/
 	outFileNameLen = strlen(fileName) - strlen(extension) + 1; /*for null*/
 	outFileName = (char *)(malloc(outFileNameLen*sizeof(char)));
 	strncpy(outFileName, fileName, outFileNameLen-1);
 	outFileName[outFileNameLen-1] = '\0';
-    } else {
+    } else if(!isTechDec) {
 	/*append the extension*/
 	outFileNameLen = strlen(fileName) + strlen(extension) + 1; /*for null*/
 	outFileName = (char *)(malloc(outFileNameLen*sizeof(char)));
 	strncpy(outFileName, fileName, strlen(fileName)+1);
 	strcat(outFileName, extension);
+    }  else{
+	outFileName = fileName;
     }
+	
     DPRINT("output file name: %s \n", outFileName);
 
 
@@ -147,7 +150,7 @@ int writeFile(char* fileName, char* outFile, long fileLength, char* mac, int
     if(NULL != test){  return OUT_FILE_EXISTS_ERROR;}
 
     FILE *out = fopen(outFileName, "wb");
-    if(NULL == out){ DPRINT("cannot open out file!\n");return FOPEN_ERROR;}
+    if(NULL == out){ DPRINT("cannot open out file %s!\n", outFileName);return FOPEN_ERROR;}
 
     DPRINT("writing outFile\n");
     fwrite(outFile, sizeof(char), fileLength, out);

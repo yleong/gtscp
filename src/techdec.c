@@ -15,6 +15,7 @@ int receiveFile(int port,
 	        char** inFile, long* fileLength);
 int verifyMac(char* key, int keyLength, char* inFile, long fileLength, int
 	macLength);
+int recvAll(int socket, char* buff, long len);
 char* USAGE_STR = "usage: techdec < filename >  [-d < port >][-l] ";
 int main(int argc, char** argv){
     char *fileName, *inFile, *outFile;  
@@ -57,7 +58,7 @@ int main(int argc, char** argv){
 	    blockLength, &outFile);
     checkErr(err, "Decryption error");
 
-    err = writeFile(fileName, outFile, fileLength - macLength, NULL, 1);
+    err = writeFile(fileName, outFile, fileLength - macLength, NULL, 1, opt);
     checkErr(err, "File write error");
 
     return 0;
@@ -121,26 +122,44 @@ int receiveFile(int port,
     err = listen(receiveSocket, 1);
     if(err) {return ERROR;}
     DPRINT("now listening\n");
-    while(1){
-	DPRINT("waiting");
-	acceptedSocket = accept(receiveSocket, &incomingAddr,
-		&incomingAddrSize);
-	if(-1 == acceptedSocket) continue;
-	if(0 == *fileLength){
-	    DPRINT("receiving file length\n");
-	    /*file length has not been received yet*/
-	    char * buff = (char*)(malloc(1 * sizeof(long)));
-	    recv(acceptedSocket, buff, 1*sizeof(long), 0);
-	    *fileLength = ntohl(  *((long*)(buff)));
-	    DPRINT("received file length %ld\n", *fileLength);
-	    *inFile = (char*)(malloc( *fileLength *sizeof(char)));
-	} else{
-	    /*receive the ciphertext*/
-	}
-    
-    }
+
+    acceptedSocket = accept(receiveSocket, &incomingAddr, &incomingAddrSize);
+    if(-1 == acceptedSocket){DPRINT("invalid socket\n"); return ERROR;}
+
+    DPRINT("receiving file length\n");
+    /*file length has not been received yet*/
+    char * buff = (char*)(malloc(1 * sizeof(uint32_t)));
+    recvAll(acceptedSocket, buff, 1*sizeof(uint32_t));
+    //recv(acceptedSocket, buff, 1*sizeof(long), 0);
+    *fileLength = ntohl(  *((long*)(buff)));
+    DPRINT("received file length %ld\n", *fileLength);
+    *inFile = (char*)(malloc( *fileLength *sizeof(char)));
+
+    DPRINT("receiving actual ciphertext itself\n");
+
+    /*signal to techrypt that techdec is ready
+    char ack = 'Y';
+    send(acceptedSocket, &ack, sizeof(ack), 0);
+    */
+
+    /*receive the ciphertext*/
+    recvAll(acceptedSocket, *inFile, *fileLength);
 
     return NONE;
+}
+ 
+int recvAll(int socket, char* buff, long len){
+    long recvdAmt;
+    long totalRecvd = 0;
+
+    while(totalRecvd != len){
+	DPRINT("receiving %ld of %ld", totalRecvd, len);
+	recvdAmt = recv(socket, (buff+totalRecvd), len-totalRecvd, 0);
+	if(-1 == recvdAmt ){
+	    continue;
+	}
+	totalRecvd += recvdAmt;
+    }
 }
 
 int verifyMac(char* key, int keyLength, char* inFile, long fileLength, int

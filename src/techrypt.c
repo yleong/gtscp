@@ -13,6 +13,7 @@
 
 int sendFile(char* outFile, long fileLength, char* mac, int macLength, char*
 	ipAddr, int port);
+int sendAll(int socket, char* buff, long len);
 char* USAGE_STR = "usage: techrypt < input file > [-d < IP-addr:port >][-l ]";
 int main(int argc, char** argv){
 
@@ -55,7 +56,7 @@ int main(int argc, char** argv){
 	checkErr(err, "File send error");
     } else if(L_LOCAL == opt){
 	DPRINT("writing file locally\n");
-	err = writeFile(fileName, outFile, fileLength, mac, macLength);
+	err = writeFile(fileName, outFile, fileLength, mac, macLength, opt);
 	checkErr(err, "File write error");
     }
     
@@ -117,22 +118,26 @@ int sendFile(char* outFile, long fileLength, char* mac, int macLength, char*
     uint32_t length = htonl(fileLength + macLength);
     DPRINT("sending the file length now\n");
     sendAll(sendSocket, (char*)(&length), sizeof(length) );
-    //sendAll(sendSocket, outFile, fileLength);
-    //sendAll(sendSocket, mac, macLength);
+
+    char ack = 0;
+    //while(-1 != recv(sendSocket, &ack, sizeof(ack), 0) && 'Y' != ack);
+    DPRINT("sending the ciphertext now\n");
+    sendAll(sendSocket, outFile, fileLength);
+    sendAll(sendSocket, mac, macLength);
 
     close(sendSocket);
     
     return NONE;
 }
-int sendAll(int socket, char* buff, int len){
-    int sentAmt;
-    int totalSent = 0;
+int sendAll(int socket, char* buff, long len){
+    long sentAmt;
+    long totalSent = 0;
 
     while(totalSent != len){
-	DPRINT("sending %d of %d", totalSent, len);
+	DPRINT("sending %ld of %ld", totalSent, len);
 	sentAmt = send(socket, (buff+totalSent), len-totalSent, 0);
 	if(-1 == sentAmt ){
-	    return ERROR;
+	    continue;
 	}
 	totalSent += sentAmt;
     }

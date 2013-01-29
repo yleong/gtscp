@@ -17,7 +17,7 @@ int hmac     (char* key, int keyLength, char* outFile, long fileLength,
 int readFile (char* fileName, 
 	      long* fileLength, char** inFile);
 int writeFile(char* fileName, char* outFile, long fileLength, char* mac, int
-	macLength);
+	macLength, int opt);
 
 /*misc*/
 int parseArgs(int argc, char** argv, 

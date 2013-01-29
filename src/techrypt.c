@@ -8,15 +8,16 @@ int main(int argc, char** argv){
 
     char *fileName, *inFile, *outFile, *mac, *ipAddr;  
     int port;
-    int fileLength;
+    long fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
-    int keyLength = 32;
+    int keyLength = 32, macLength;
     int numIterations = 4096, ctrInit = 0;
     char *key;
 
 
     opt = parseArgs(argc, argv, &fileName, &ipAddr, &port);
+    DPRINT("got option: %d", opt);
     checkErr(opt, USAGE_STR);
 
     password = getpass("Password:");
@@ -32,14 +33,23 @@ int main(int argc, char** argv){
     err = aes_ctr(key, inFile, fileLength, ctrInit, &outFile);
     checkErr(err, "Encryption error");
 
-    err = hmac(key, outFile, fileLength, &mac);
+    err = hmac(key, outFile, fileLength, &mac, &macLength);
     checkErr(err, "HMAC computation error");
 
     if(D_SEND == opt){
 	err = sendFile(outFile, mac, ipAddr, port);
 	checkErr(err, "File send error");
     } else if(L_LOCAL == opt){
-	err = writeFile(fileName, outFile, mac);
+	DPRINT("writing file locally\n");
+
+
+	/*DEBUGGING ONLY PLS REMOVE!!!!!!*/
+	mac = salt;
+	macLength = 14;
+	/*!!!!!!!!!!!!*/
+
+
+	err = writeFile(fileName, outFile, fileLength, mac, macLength);
 	checkErr(err, "File write error");
     }
     

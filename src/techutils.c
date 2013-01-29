@@ -39,22 +39,77 @@ int deriveKey(char* password, char* salt, int numIterations, int keyLength,
     if(err){ return KEY_DERIVE_ERROR;}
     return NONE;
 }
-int aes_ctr  (char* key, char* inFile, int fileLength, int ctrInit,
+int aes_ctr  (char* key, char* inFile, long fileLength, int ctrInit,
               char** outFile){
     return NONE;
 }
-int hmac     (char* key, char* outFile, int fileLength,
-	      char** mac ){
+int hmac     (char* key, char* outFile, long fileLength,
+	      char** mac, int* macLength ){
     return NONE;
 }
 
 /*file IO*/
+/*Reads the entire file into char* inFile*/
 int readFile (char* fileName,
-	      int* fileLength, char** inFile){
+	      long* fileLength, char** inFile){
+    FILE *in = fopen(fileName, "rb");
+    if(NULL == in){
+	return FOPEN_ERROR; 
+    }
+    fseek(in, 0, SEEK_END);
+    *fileLength = ftell(in);
+    fseek(in, 0, SEEK_SET);
+
+    *inFile = (char*)(malloc( (*fileLength) * sizeof(char)));
+    fread(*inFile, sizeof(char), *fileLength, in);
+
+    fclose(in);
+    
     return NONE;
 }
-int writeFile(char* fileName, char* outFile, char* mac){
+int writeFile(char* fileName, char* outFile, long fileLength, char* mac, int
+	macLength){
+    int isTechDec = (NULL == mac);
+    char * extension = ".gt";
+    char * outFileName;
+    int outFileNameLen;
+
+    /*techdec removes the extension, techrypt adds the extension*/
     /*check if exists -> error code 33*/
+    if(isTechDec){
+	/*strip the extension*/
+	DPRINT("fileName: %s, extension: %s", fileName, extension);
+	outFileNameLen = strlen(fileName) - strlen(extension) + 1; /*for null*/
+	outFileName = (char *)(malloc(outFileNameLen*sizeof(char)));
+	strncpy(outFileName, fileName, outFileNameLen-1);
+	outFileName[outFileNameLen-1] = '\0';
+    } else {
+	/*append the extension*/
+	outFileNameLen = strlen(fileName) + strlen(extension) + 1; /*for null*/
+	outFileName = (char *)(malloc(outFileNameLen*sizeof(char)));
+	strncpy(outFileName, fileName, strlen(fileName)+1);
+	strcat(outFileName, extension);
+    }
+    DPRINT("output file name: %s \n", outFileName);
+
+
+    /*test if file exists*/
+    FILE *test = fopen(outFileName, "r");
+    if(NULL != test){  return OUT_FILE_EXISTS_ERROR;}
+
+    FILE *out = fopen(outFileName, "wb");
+    if(NULL == out){ DPRINT("cannot open out file!\n");return FOPEN_ERROR;}
+
+    DPRINT("writing outFile\n");
+    fwrite(outFile, sizeof(char), fileLength, out);
+    if(!isTechDec){
+	DPRINT("writing mac\n");
+	/*write the mac*/
+	fwrite(mac, sizeof(char), macLength, out);
+    } 
+
+    fclose(out);
+
     return NONE;
 }
 
@@ -113,11 +168,11 @@ int parseArgs(int argc, char** argv,
 	option = L_LOCAL; /* this is implied*/
     }
 
-    return NONE;
+    return option;
 }
 
 void checkErr(int err, char* msg){
-    if(NONE != err){
+    if(NONE != err && L_LOCAL != err && D_DAEMON != err && D_SEND != err){
 	printf("%s\n", msg);
 	exit(err);
     }

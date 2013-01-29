@@ -3,16 +3,16 @@
 #include <unistd.h>
 
 int receiveFile(int port, 
-	        char** inFile, int* fileLength);
-int verifyMac(char* key, char* inFile, int fileLength);
+	        char** inFile, long* fileLength);
+int verifyMac(char* key, char* inFile, long fileLength);
 char* USAGE_STR = "usage: techdec < filename >  [-d < port >][-l] ";
 int main(int argc, char** argv){
     char *fileName, *inFile, *outFile;  
     int port;
-    int fileLength;
+    long fileLength;
     int opt, err;  /*error codes*/
     char *password, *salt = "SodiumChloride";
-    int keyLength = 32;
+    int keyLength = 32, macLength;
     int numIterations = 4096, ctrInit = 0;
     char *key;
 
@@ -41,17 +41,20 @@ int main(int argc, char** argv){
     err = aes_ctr(key, inFile, fileLength - HMAC_LENGTH, ctrInit, &outFile);
     checkErr(err, "Decryption error");
 
+    err = writeFile(fileName, outFile, fileLength, NULL, 1);
+    checkErr(err, "File write error");
+
     return 0;
 }
 int receiveFile(int port, 
-	        char** inFile, int* fileLength){
+	        char** inFile, long* fileLength){
     return NONE;
 }
-int verifyMac(char* key, char* inFile, int fileLength){
-    int err;
+int verifyMac(char* key, char* inFile, long fileLength){
+    int err, macLength;
     char* mac;
 
-    err = hmac(key, inFile, fileLength - HMAC_LENGTH,  &mac);
+    err = hmac(key, inFile, fileLength - HMAC_LENGTH,  &mac, &macLength);
     checkErr(err, "HMAC computation error");
     return NONE;
 }
